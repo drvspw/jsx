@@ -140,6 +140,38 @@ when is_integer(Year), is_integer(Month), is_integer(Day), is_integer(Hour), is_
         Stack,
         Config
     );
+value([{IP1,IP2,IP3,IP4} = Ipv4|Tokens], Handler, Stack, Config) 
+  when is_integer(IP1),is_integer(IP2),is_integer(IP3),is_integer(IP4) ->
+       value([{string, unicode:characters_to_binary( inet:ntoa(Ipv4) )} | Tokens],
+	     Handler,
+	     Stack,
+	     Config
+	    );
+value([{{IP1,IP2,IP3,IP4} = Ipv4,L} = _Ipv4Cidr|Tokens], Handler, Stack, Config) 
+  when is_integer(IP1),is_integer(IP2),is_integer(IP3),is_integer(IP4),is_integer(L) ->
+       value([{string, unicode:characters_to_binary( io_lib:format(
+           "~s/~p",[inet:ntoa(Ipv4),L]) )} | Tokens],
+	     Handler,
+	     Stack,
+	     Config
+	    );
+
+value([{IP1,IP2,IP3,IP4,IP5,IP6,IP7,IP8} = Ipv6|Tokens], Handler, Stack, Config) 
+  when is_integer(IP1),is_integer(IP2),is_integer(IP3),is_integer(IP4),is_integer(IP5),is_integer(IP6),is_integer(IP7),is_integer(IP8) ->
+       value([{string, unicode:characters_to_binary( inet:ntoa(Ipv6) )} | Tokens],
+	     Handler,
+	     Stack,
+	     Config
+	    );
+value([{{IP1,IP2,IP3,IP4,IP5,IP6,IP7,IP8} = Ipv6,L} = _Ipv6Cidr|Tokens], Handler, Stack, Config) 
+  when is_integer(IP1),is_integer(IP2),is_integer(IP3),is_integer(IP4),is_integer(IP5),is_integer(IP6),is_integer(IP7),is_integer(IP8),is_integer(L) ->
+       value([{string, unicode:characters_to_binary( io_lib:format(
+           "~s/~p",[inet:ntoa(Ipv6),L]) )} | Tokens],
+	     Handler,
+	     Stack,
+	     Config
+	    );
+
 value([{literal, Value}|Tokens], Handler, Stack, Config)
 when Value == true; Value == false; Value == null ->
     value([Value] ++ Tokens, Handler, Stack, Config);
@@ -160,6 +192,7 @@ value([String|Tokens], Handler, Stack, Config) when is_atom(String) ->
 value([], Handler, Stack, Config) ->
     incomplete(value, Handler, Stack, Config);
 value(BadTokens, Handler, Stack, Config) when is_list(BadTokens) ->
+    io:format("~p~n", [BadTokens]),
     ?error(value, BadTokens, Handler, Stack, Config);
 value(Token, Handler, Stack, Config) ->
     value([Token], Handler, Stack, Config).
@@ -1188,6 +1221,25 @@ datetime_test_() ->
         )}
     ].
 
+inet_test_() ->
+    [
+        {"ipv4", ?_assertEqual(
+            [start_array, {string, <<"14.8.13.3">>}, end_array, end_json],
+            parse([start_array, {14,08,13,3}, end_array, end_json], [])
+        )},
+        {"ipv4cidr", ?_assertEqual(
+            [start_array, {string, <<"14.8.13.3/12">>}, end_array, end_json],
+            parse([start_array, {{14,08,13,3},12}, end_array, end_json], [])
+        )},        
+        {"ipv6", ?_assertEqual(
+            [start_array, {string, <<"e:8:d:3:a:198f:b0:16">>}, end_array, end_json],
+            parse([start_array, {14,08,13,3,10,6543,176,22}, end_array, end_json], [])
+        )},
+        {"ipv6cidr", ?_assertEqual(
+            [start_array, {string, <<"e:8:d:3:a:198f:b0:16/64">>}, end_array, end_json],
+            parse([start_array, {{14,08,13,3,10,6543,176,22},64}, end_array, end_json], [])
+        )}
+    ].
 
 timestamp_test_() ->
     [
